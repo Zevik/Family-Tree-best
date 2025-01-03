@@ -33,6 +33,19 @@ function getData() {
   };
 }
 
+/*
+דוגמה למבנה נתונים בגיליון People:
+id | firstName | lastName | birthDate
+1  | ישראל    | ישראלי  | 1990-01-01
+*/
+
+/*
+דוגמה למבנה נתונים בגיליון Relations:
+id | personId1 | personId2 | relationType | marriageDate
+1  | 123       | 456       | parent       | 
+2  | 789       | 456       | spouse       | 2020-01-01
+*/
+
 function testData() {
   const data = getData();
   Logger.log(data.people.length);

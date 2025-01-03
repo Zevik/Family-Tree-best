@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>המשפחה שלי</title>
   
+  <!-- Add jQuery before Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -18,12 +20,26 @@
       font-family: 'Assistant', sans-serif; 
       background-color: #f3f4f6;
       overscroll-behavior: none; /* מניעת pull-to-refresh */
+      font-size: 18px;
     }
-    input { font-size: 16px; }
+    input { 
+      font-size: 18px;
+      padding: 12px !important;
+    }
+    .card-text {
+      font-size: 1.2rem;
+    }
+    .family-card {
+      margin: 15px 0;
+      padding: 15px;
+    }
+    .expanded-section {
+      margin-top: 15px;
+    }
   </style>
 </head>
 
-<body>
+<body class="text-right">
   <script>
     window.serverData = <?!= serverData ?>;
   </script>
@@ -88,34 +104,128 @@
       );
     };
 
-    const FamilyCard = ({ person, allPeople, relations, isExpanded, onToggle }) => {
-      // מציאת קשרים משפחתיים
-      const getRelatives = () => {
-        const parents = relations.filter(r => 
-          r.relationType === 'parent' && 
-          r.personId2 === person.id
-        ).map(r => allPeople.find(p => p.id === r.personId1));
-
-        const children = relations.filter(r => 
-          r.relationType === 'parent' && 
-          r.personId1 === person.id
-        ).map(r => allPeople.find(p => p.id === r.personId2));
-
-        const siblings = relations
-          .filter(r => r.relationType === 'parent')
-          .filter(r => {
-            const personParents = relations
-              .filter(pr => pr.relationType === 'parent' && pr.personId2 === person.id)
-              .map(pr => pr.personId1);
-            return personParents.includes(r.personId1) && r.personId2 !== person.id;
-          })
-          .map(r => allPeople.find(p => p.id === r.personId2));
-
-        return { parents, children, siblings };
+    // הוספת פונקציית עזר לחישוב קשרי משפחה
+    const calculateFamilyRelations = (personId, relations, allPeople) => {
+      const directRelations = {
+        parents: [],      // הורים
+        children: [],     // ילדים
+        siblings: [],     // אחים
+        spouses: [],      // בני/בנות זוג
+        grandparents: [], // סבים
+        grandchildren: [], // נכדים
+        cousins: [],      // בני דודים
+        unclesAunts: [],  // דודים
+        nephewsNieces: [] // אחיינים
       };
 
-      const { parents, children, siblings } = getRelatives();
+      // מציאת הורים
+      directRelations.parents = relations
+        .filter(r => r.relationType === 'parent' && r.personId2 === personId)
+        .map(r => allPeople.find(p => p.id === r.personId1));
 
+      // מציאת ילדים
+      directRelations.children = relations
+        .filter(r => r.relationType === 'parent' && r.personId1 === personId)
+        .map(r => allPeople.find(p => p.id === r.personId2));
+
+      // מציאת אחים (מי שחולק את אותם הורים)
+      const parentIds = directRelations.parents.map(p => p.id);
+      directRelations.siblings = relations
+        .filter(r => r.relationType === 'parent' && 
+                    parentIds.includes(r.personId1) && 
+                    r.personId2 !== personId)
+        .map(r => allPeople.find(p => p.id === r.personId2));
+
+      // מציאת סבים (הורי ההורים)
+      directRelations.grandparents = relations
+        .filter(r => r.relationType === 'parent' && 
+                    directRelations.parents.map(p => p.id).includes(r.personId2))
+        .map(r => allPeople.find(p => p.id === r.personId1));
+
+      // מציאת נכדים (ילדי הילדים)
+      directRelations.grandchildren = relations
+        .filter(r => r.relationType === 'parent' && 
+                    directRelations.children.map(c => c.id).includes(r.personId1))
+        .map(r => allPeople.find(p => p.id === r.personId2));
+
+      // מציאת דודים (אחי ההורים)
+      const grandparentIds = directRelations.grandparents.map(gp => gp.id);
+      directRelations.unclesAunts = relations
+        .filter(r => r.relationType === 'parent' && 
+                    grandparentIds.includes(r.personId1) &&
+                    !parentIds.includes(r.personId2))
+        .map(r => allPeople.find(p => p.id === r.personId2));
+
+      // מציאת בני זוג
+      directRelations.spouses = relations
+        .filter(r => r.relationType === 'spouse' && 
+                  (r.personId1 === personId || r.personId2 === personId))
+        .map(r => ({
+          spouse: allPeople.find(p => p.id === (r.personId1 === personId ? r.personId2 : r.personId1)),
+          marriageDate: r.marriageDate,
+          commonChildren: relations
+            .filter(cr => cr.relationType === 'parent' &&
+              (cr.personId1 === personId || cr.personId1 === r.personId2))
+            .map(cr => allPeople.find(p => p.id === cr.personId2))
+            .filter(child => child !== undefined)
+        }));
+
+      return directRelations;
+    };
+
+    // פונקציית עזר לחישוב גיל
+    const calculateAge = (birthDate) => {
+      if (!birthDate) return null;
+      const today = new Date();
+      const birthDateObj = new Date(birthDate);
+      let age = today.getFullYear() - birthDateObj.getFullYear();
+      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    const SpouseSection = ({ spouses }) => {
+      if (!spouses.length) return null;
+      
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="text-lg font-medium text-gray-600">
+            {spouses.length > 1 ? 'בני/בנות זוג:' : 'בן/בת זוג:'}
+          </div>
+          {spouses.map(({ spouse, marriageDate, commonChildren }, index) => (
+            <div key={spouse.id} className="bg-white rounded-lg shadow-sm p-3">
+              <div className="font-medium">
+                {spouse.firstName} {spouse.lastName}
+                {calculateAge(spouse.birthDate) && 
+                  <span className="text-sm text-gray-500 mr-1">
+                    ({calculateAge(spouse.birthDate)})
+                  </span>
+                }
+              </div>
+              {marriageDate && (
+                <div className="text-sm text-gray-500">
+                  תאריך נישואין: {new Date(marriageDate).toLocaleDateString('he-IL')}
+                </div>
+              )}
+              {commonChildren?.length > 0 && (
+                <div className="text-sm text-gray-500 mt-1">
+                  ילדים משותפים: {commonChildren.map(child => 
+                    `${child.firstName} ${child.lastName}`).join(', ')}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    const FamilyCard = ({ person, allPeople, relations, isExpanded, onToggle }) => {
+      const familyRelations = calculateFamilyRelations(person.id, relations, allPeople);
+      const age = calculateAge(person.birthDate);
+      
       return (
         <div className="mb-4">
           {/* כרטיס ראשי */}
@@ -124,20 +234,26 @@
             className={`bg-white rounded-lg shadow-lg p-4 cursor-pointer transition-all w-100 
               ${isExpanded ? 'ring-2 ring-blue-500' : 'hover:bg-gray-50'}`}
           >
-            {/* הורים בקטן למעלה */}
-            {parents.length > 0 && (
-              <div className="text-xs text-gray-500 mb-1">
-                הורים: {parents.map(p => `${p.firstName} ${p.lastName}`).join(' | ')}
+            {/* תצוגת מידע בסיסי */}
+            <div className="flex justify-between items-center">
+              <div className="text-xl font-medium">
+                {person.firstName} {person.lastName}
+                {age && <span className="text-sm text-gray-500 mr-2">({age})</span>}
+              </div>
+            </div>
+            
+            {/* הצגת בן/בת זוג בכרטיס הראשי */}
+            {familyRelations.spouses.length > 0 && (
+              <div className="text-sm text-gray-500 mt-1">
+                {familyRelations.spouses.length > 1 ? 'בני/בנות זוג' : 'בן/בת זוג'}: 
+                {familyRelations.spouses.map(({spouse}) => 
+                  `${spouse.firstName} ${spouse.lastName}`).join(', ')}
               </div>
             )}
-            
-            {/* שם האדם */}
-            <div className="text-xl font-medium">{person.firstName} {person.lastName}</div>
-            
-            {/* ילדים בקטן למטה */}
-            {children.length > 0 && (
-              <div className="text-xs text-gray-500 mt-1">
-                ילדים: {children.map(c => `${c.firstName} ${c.lastName}`).join(' | ')}
+
+            {familyRelations.parents.length > 0 && (
+              <div className="text-sm text-gray-500">
+                הורים: {familyRelations.parents.map(p => `${p.firstName} ${p.lastName}`).join(', ')}
               </div>
             )}
           </div>
@@ -145,75 +261,53 @@
           {/* תצוגה מורחבת */}
           {isExpanded && (
             <div className="mt-2 space-y-3">
-              {/* הורים */}
-              {parents.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-500 font-medium">הורים:</div>
-                  {parents.map(parent => (
-                    <div key={parent.id} className="bg-white rounded-lg shadow p-3 w-100">
-                      <div className="font-medium">{parent.firstName} {parent.lastName}</div>
-                      {parent.nickname && (
-                        <div className="text-sm text-gray-500">{parent.nickname}</div>
-                      )}
+              {/* קומפוננטה חדשה להצגת בני זוג */}
+              <SpouseSection spouses={familyRelations.spouses} />
+              
+              {/* שאר הקשרים המשפחתיים */}
+              {Object.entries(familyRelations).map(([relation, members]) => {
+                if (relation === 'spouses' || members.length === 0) return null;
+                
+                return (
+                  <div key={relation} className="space-y-2">
+                    <div className="text-sm text-gray-500 font-medium">
+                      {getRelationTitle(relation)}:
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* אחים */}
-              {siblings.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-500 d-flex justify-content-between align-items-center">
-                    <span>אחים:</span>
-                    <span className="text-xs text-gray-400">
-                      {/* מספר האח הנוכחי מתוך הסך הכל */}
-                      {siblings.length > 1 ? 'החלק לצדדים לאחים נוספים' : ''}
-                    </span>
-                  </div>
-                  <div className="position-relative">
-                    <div className="overflow-hidden">
-                      <div className="d-flex snap-x snap-mandatory overflow-x-auto scrollbar-hide">
-                        {siblings.map(sibling => (
-                          <div 
-                            key={sibling.id}
-                            className="snap-center shrink-0 w-100 scroll-smooth"
-                          >
-                            <div className="bg-gray-50 rounded-lg p-3 mx-1">
-                              <div className="font-medium">
-                                {sibling.firstName} {sibling.lastName}
-                              </div>
-                              {sibling.nickname && (
-                                <div className="text-sm text-gray-500">
-                                  {sibling.nickname}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      {members.map(member => (
+                        <div key={member.id} className="bg-white rounded-lg shadow p-3">
+                          {member.firstName} {member.lastName}
+                          {calculateAge(member.birthDate) && 
+                            <span className="text-sm text-gray-500 mr-1">
+                              ({calculateAge(member.birthDate)})
+                            </span>
+                          }
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* ילדים */}
-              {children.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-500 font-medium">ילדים:</div>
-                  {children.map(child => (
-                    <div key={child.id} className="bg-white rounded-lg shadow p-3 w-100">
-                      <div className="font-medium">{child.firstName} {child.lastName}</div>
-                      {child.nickname && (
-                        <div className="text-sm text-gray-500">{child.nickname}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
       );
+    };
+
+    // פונקציית עזר להמרת שמות היחסים לעברית
+    const getRelationTitle = (relation) => {
+      const titles = {
+        parents: 'הורים',
+        children: 'ילדים',
+        siblings: 'אחים',
+        spouses: 'בני/בנות זוג',
+        grandparents: 'סבים',
+        grandchildren: 'נכדים',
+        cousins: 'בני דודים',
+        unclesAunts: 'דודים',
+        nephewsNieces: 'אחיינים'
+      };
+      return titles[relation] || relation;
     };
 
     function App() {
@@ -261,9 +355,10 @@
 
       return (
         <div 
-          className="w-100 sm:w-11/12 md:w-3/4 mx-auto p-4 min-vh-100"
+          className="container px-2 py-4"
+          style={{ fontSize: '1.25rem' }}
         >
-          <h1 className="text-2xl font-bold text-center mb-6">המשפחה שלי</h1>
+          <h1 className="display-4 text-center mb-4">המשפחה שלי</h1>
           
           <div className="mb-6">
             <SearchBox 
