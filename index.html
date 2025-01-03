@@ -116,21 +116,29 @@
     // הוספת פונקציית עזר לחישוב קשרי משפחה
     const calculateFamilyRelations = (personId, relations, allPeople) => {
       const directRelations = {
-        parents: [],      // הורים
-        children: [],     // ילדים
-        siblings: [],     // אחים
-        spouses: [],      // בני/בנות זוג
-        grandparents: [], // סבים
-        grandchildren: [], // נכדים
-        cousins: [],      // בני דודים
-        unclesAunts: [],  // דודים
-        nephewsNieces: [] // אחיינים
+        parents: [],
+        children: [],
+        siblings: [],
+        spouses: [],
+        grandparents: [],
+        grandchildren: [],
+        cousins: [],
+        unclesAunts: [],
+        nephewsNieces: []
       };
 
       // מציאת הורים
-      directRelations.parents = relations
+      const parentIds = new Set();
+      relations
         .filter(r => r.relationType === 'parent' && r.personId2 === personId)
-        .map(r => allPeople.find(p => p.id === r.personId1));
+        .forEach(r => {
+          const parent = allPeople.find(p => p.id === r.personId1);
+          if (parent) {
+            parentIds.add(parent.id);
+          }
+        });
+        directRelations.parents = Array.from(parentIds).map(id => allPeople.find(p => p.id === id));
+        
 
       // מציאת ילדים
       directRelations.children = relations
@@ -138,18 +146,37 @@
         .map(r => allPeople.find(p => p.id === r.personId2));
 
       // מציאת אחים (מי שחולק את אותם הורים)
-      const parentIds = directRelations.parents.map(p => p.id);
-      directRelations.siblings = relations
-        .filter(r => r.relationType === 'parent' && 
-                    parentIds.includes(r.personId1) && 
-                    r.personId2 !== personId)
-        .map(r => allPeople.find(p => p.id === r.personId2));
+    const siblingIds = new Set();
+    const parentIdsForSiblings = directRelations.parents.map(p => p.id);
+
+    relations
+      .filter(r =>
+        r.relationType === "parent" &&
+        parentIdsForSiblings.includes(r.personId1) &&
+        r.personId2 !== personId
+      )
+      .forEach(r => {
+        const sibling = allPeople.find(p => p.id === r.personId2);
+        if (sibling) {
+            siblingIds.add(sibling.id);
+        }
+      });
+
+    directRelations.siblings = Array.from(siblingIds).map(id => allPeople.find(p => p.id === id));
 
       // מציאת סבים (הורי ההורים)
-      directRelations.grandparents = relations
-        .filter(r => r.relationType === 'parent' && 
+     const grandparentIds = new Set()
+     relations
+      .filter(r => r.relationType === 'parent' &&
                     directRelations.parents.map(p => p.id).includes(r.personId2))
-        .map(r => allPeople.find(p => p.id === r.personId1));
+     .forEach(r => {
+       const grandparent = allPeople.find(p => p.id === r.personId1)
+       if (grandparent){
+        grandparentIds.add(grandparent.id)
+       }
+     });
+    directRelations.grandparents = Array.from(grandparentIds).map(id => allPeople.find(p => p.id === id));
+
 
       // מציאת נכדים (ילדי הילדים)
       directRelations.grandchildren = relations
@@ -158,16 +185,25 @@
         .map(r => allPeople.find(p => p.id === r.personId2));
 
       // מציאת דודים (אחי ההורים)
-      const grandparentIds = directRelations.grandparents.map(gp => gp.id);
-      directRelations.unclesAunts = relations
-        .filter(r => r.relationType === 'parent' && 
-                    grandparentIds.includes(r.personId1) &&
-                    !parentIds.includes(r.personId2))
-        .map(r => allPeople.find(p => p.id === r.personId2));
+     const uncleAuntIds = new Set()
+     const grandparentIdsForUncles = directRelations.grandparents.map(gp => gp.id);
+     const parentIdsForUncles = directRelations.parents.map(p => p.id);
+    relations
+      .filter(r => r.relationType === 'parent' && 
+                    grandparentIdsForUncles.includes(r.personId1) &&
+                    !parentIdsForUncles.includes(r.personId2))
+    .forEach(r => {
+      const uncleAunt = allPeople.find(p => p.id === r.personId2);
+      if (uncleAunt) {
+        uncleAuntIds.add(uncleAunt.id)
+      }
+    });
 
-      // מציאת בני זוג
-      directRelations.spouses = relations
-        .filter(r => r.relationType === 'spouse' && 
+    directRelations.unclesAunts = Array.from(uncleAuntIds).map(id => allPeople.find(p => p.id === id));
+    
+    // מציאת בני זוג
+     directRelations.spouses = relations
+        .filter(r => r.relationType === 'spouse' &&
                   (r.personId1 === personId || r.personId2 === personId))
         .map(r => ({
           spouse: allPeople.find(p => p.id === (r.personId1 === personId ? r.personId2 : r.personId1)),
@@ -182,17 +218,40 @@
       return directRelations;
     };
 
-    // פונקציית עזר לחישוב גיל
+    // הוספת פונקציית לוג לבדיקת נתונים
+    const debugLog = (label, data) => {
+      console.log('DEBUG:', label, data);
+    };
+
+    // עדכון פונקציית חישוב גיל עם לוג
     const calculateAge = (birthDate) => {
-      if (!birthDate) return null;
+      debugLog('Calculating age for birthDate:', birthDate);
+      if (!birthDate) {
+        debugLog('No birthDate provided', null);
+        return null;
+      }
+
+      let birthDateObj;
+      if (typeof birthDate === 'string') {
+          debugLog('birthDate String:', birthDate);
+        // Split the date string into its components
+        const [year, month, day] = birthDate.split('-').map(Number);
+          
+          birthDateObj = new Date(year, month - 1, day);
+
+      } else {
+        birthDateObj = new Date(birthDate);
+      }
+     
+     debugLog('birthDateObj:', birthDateObj);
       const today = new Date();
-      const birthDateObj = new Date(birthDate);
       let age = today.getFullYear() - birthDateObj.getFullYear();
       const monthDiff = today.getMonth() - birthDateObj.getMonth();
       
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
         age--;
       }
+      debugLog('Calculated age:', age);
       return age;
     };
 
@@ -251,8 +310,11 @@
     };
 
     const FamilyCard = ({ person, allPeople, relations, isExpanded, onToggle }) => {
+      debugLog('Person data:', person);
+        console.log('person in family card', person); // log the person object here
       const familyRelations = calculateFamilyRelations(person.id, relations, allPeople);
       const age = calculateAge(person.birthDate);
+      debugLog('Person age:', age);
       
       return (
         <div className="mb-4">
@@ -340,6 +402,7 @@
 
     function App() {
       const [data] = React.useState(window.serverData);
+      debugLog('Server data:', data);
       const [filteredPeople, setFilteredPeople] = React.useState(data?.people || []);
       const [expandedCards, setExpandedCards] = React.useState(new Set());
 
@@ -413,6 +476,41 @@
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
+  </script>
+
+  <script type="text/babel">
+    // עדכון פונקציית חישוב גיל עם בדיקות נוספות
+    const calculateAge = (birthDate) => {
+      debugLog('Raw birthDate:', birthDate);
+      if (!birthDate) {
+        debugLog('No birthDate provided', null);
+        return null;
+      }
+
+      let birthDateObj;
+      if (typeof birthDate === 'string') {
+          debugLog('birthDate String:', birthDate);
+        // Split the date string into its components
+        const [year, month, day] = birthDate.split('-').map(Number);
+          
+          birthDateObj = new Date(year, month - 1, day);
+
+      } else {
+        birthDateObj = new Date(birthDate);
+      }
+    
+      debugLog('birthDateObj:', birthDateObj);
+      
+      const today = new Date();
+      let age = today.getFullYear() - birthDateObj.getFullYear();
+      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+        age--;
+      }
+      debugLog('Calculated age:', age);
+      return age;
+    };
   </script>
 </body>
 </html>
