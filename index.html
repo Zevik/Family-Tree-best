@@ -1,79 +1,352 @@
 <!DOCTYPE html>
-<html>
+<html dir="rtl" lang="he">
 <head>
-  <title>עץ משפחה</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>המשפחה שלי</title>
+  
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+
   <style>
-    .node circle {
-      fill: #fff;
-      stroke: steelblue;
-      stroke-width: 3px;
+    body { 
+      font-family: 'Assistant', sans-serif; 
+      background-color: #f3f4f6;
+      overscroll-behavior: none; /* מניעת pull-to-refresh */
     }
-    .node text {
-      font: 12px sans-serif;
+    input { font-size: 16px; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+      font-size: 32px; /* Consider adjusting for mobile with Tailwind or media queries */
     }
-    .link {
-      fill: none;
-      stroke: #ccc;
-      stroke-width: 2px;
+
+    .container {
+      background-color: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      color: #4a4a4a;
+      text-align: center;
+      font-size: 3.6em;
+      margin-bottom: 40px;
+    }
+
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      padding: 30px;
+      margin: 20px 0;
+      display: block;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 2.2em;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 30px 40px;
+      margin: 30px 0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 2.4em;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #status {
+      margin-top: 40px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 2.2em;
     }
   </style>
 </head>
+
 <body>
-  <div id="tree"></div>
   <script>
-    google.script.run.withSuccessHandler(data => {
-      const familyData = JSON.parse(data);
-      buildTree(familyData);
-    }).getFamilyData();
+    window.serverData = <?!= serverData ?>;
+  </script>
 
-    function buildTree(data) {
-      const width = 800;
-      const height = 600;
+  <div id="root"></div>
 
-      // צור היררכיה מהנתונים
-      const root = d3.stratify()
-        .id(d => d["ID"])  // השתמש ב-ID
-        .parentId(d => d["הורה 1"] || d["הורה 2"])(data);
+  <script type="text/babel">
+    const SearchBox = ({ onSearch, onSelect }) => {
+      const [searchTerm, setSearchTerm] = React.useState('');
+      const [suggestions, setSuggestions] = React.useState([]);
+      const inputRef = React.useRef(null);
 
-      const treeLayout = d3.tree().size([width, height]);
-      treeLayout(root);
+      const handleSearch = (value) => {
+        setSearchTerm(value);
+        if (!value.trim()) {
+          setSuggestions([]);
+          onSearch('');
+          return;
+        }
 
-      const svg = d3.select("#tree")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .append("g")
-        .attr("transform", "translate(40, 0)");
-
-      // צייר את הקווים המחברים בין הצמתים
-      svg.selectAll(".link")
-        .data(root.links())
-        .enter()
-        .append("path")
-        .attr("class", "link")
-        .attr("d", d3.linkVertical()
-          .x(d => d.x)
-          .y(d => d.y)
+        const filtered = window.serverData.people.filter(person => 
+          person.firstName.includes(value) ||
+          person.lastName.includes(value)
         );
+        
+        setSuggestions(filtered);
+        onSearch(value);
+      };
 
-      // צייר את הצמתים
-      const node = svg.selectAll(".node")
-        .data(root.descendants())
-        .enter()
-        .append("g")
-        .attr("class", "node")
-        .attr("transform", d => `translate(${d.x},${d.y})`);
+      const handleSelect = (person) => {
+        setSearchTerm(`${person.firstName} ${person.lastName}`);
+        setSuggestions([]);
+        onSelect(person);
+        inputRef.current?.blur();
+      };
 
-      node.append("circle")
-        .attr("r", 10);
+      return (
+        <div className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="חפש שם פרטי או שם משפחה..."
+            className="w-full p-2 rounded-lg border border-gray-300"
+          />
+          
+          {suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border shadow-lg max-h-60 overflow-auto z-10">
+              {suggestions.map((person) => (
+                <div
+                  key={person.id}
+                  onClick={() => handleSelect(person)}
+                  className="p-2 hover:bg-gray-50 cursor-pointer"
+                >
+                  {person.firstName} {person.lastName}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    };
 
-      node.append("text")
-        .attr("dy", "0.31em")
-        .attr("x", d => d.children ? -13 : 13)
-        .style("text-anchor", d => d.children ? "end" : "start")
-        .text(d => d.data["שם פרטי"] + " " + d.data["שם משפחה"]);
+    const FamilyCard = ({ person, allPeople, relations, isExpanded, onToggle }) => {
+      // מציאת קשרים משפחתיים
+      const getRelatives = () => {
+        const parents = relations.filter(r => 
+          r.relationType === 'parent' && 
+          r.personId2 === person.id
+        ).map(r => allPeople.find(p => p.id === r.personId1));
+
+        const children = relations.filter(r => 
+          r.relationType === 'parent' && 
+          r.personId1 === person.id
+        ).map(r => allPeople.find(p => p.id === r.personId2));
+
+        const siblings = relations
+          .filter(r => r.relationType === 'parent')
+          .filter(r => {
+            const personParents = relations
+              .filter(pr => pr.relationType === 'parent' && pr.personId2 === person.id)
+              .map(pr => pr.personId1);
+            return personParents.includes(r.personId1) && r.personId2 !== person.id;
+          })
+          .map(r => allPeople.find(p => p.id === r.personId2));
+
+        return { parents, children, siblings };
+      };
+
+      const { parents, children, siblings } = getRelatives();
+
+      return (
+        <div className="mb-4">
+          {/* כרטיס ראשי */}
+          <div 
+            onClick={() => onToggle(person.id)}
+            className={`bg-white rounded-lg shadow-lg p-4 cursor-pointer transition-all w-full 
+              ${isExpanded ? 'ring-2 ring-blue-500' : 'hover:bg-gray-50'}`}
+          >
+            {/* הורים בקטן למעלה */}
+            {parents.length > 0 && (
+              <div className="text-xs text-gray-500 mb-1">
+                הורים: {parents.map(p => `${p.firstName} ${p.lastName}`).join(' | ')}
+              </div>
+            )}
+            
+            {/* שם האדם */}
+            <div className="text-xl font-medium">{person.firstName} {person.lastName}</div>
+            
+            {/* ילדים בקטן למטה */}
+            {children.length > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                ילדים: {children.map(c => `${c.firstName} ${c.lastName}`).join(' | ')}
+              </div>
+            )}
+          </div>
+
+          {/* תצוגה מורחבת */}
+          {isExpanded && (
+            <div className="mt-2 space-y-3">
+              {/* הורים */}
+              {parents.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-500 font-medium">הורים:</div>
+                  {parents.map(parent => (
+                    <div key={parent.id} className="bg-white rounded-lg shadow p-3 w-full">
+                      <div className="font-medium">{parent.firstName} {parent.lastName}</div>
+                      {parent.nickname && (
+                        <div className="text-sm text-gray-500">{parent.nickname}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* אחים */}
+              {siblings.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-500 flex justify-between items-center">
+                    <span>אחים:</span>
+                    <span className="text-xs text-gray-400">
+                      {/* מספר האח הנוכחי מתוך הסך הכל */}
+                      {siblings.length > 1 ? 'החלק לצדדים לאחים נוספים' : ''}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <div className="overflow-hidden">
+                      <div className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide">
+                        {siblings.map(sibling => (
+                          <div 
+                            key={sibling.id}
+                            className="snap-center shrink-0 w-full scroll-smooth"
+                          >
+                            <div className="bg-gray-50 rounded-lg p-3 mx-1">
+                              <div className="font-medium">
+                                {sibling.firstName} {sibling.lastName}
+                              </div>
+                              {sibling.nickname && (
+                                <div className="text-sm text-gray-500">
+                                  {sibling.nickname}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ילדים */}
+              {children.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-500 font-medium">ילדים:</div>
+                  {children.map(child => (
+                    <div key={child.id} className="bg-white rounded-lg shadow p-3 w-full">
+                      <div className="font-medium">{child.firstName} {child.lastName}</div>
+                      {child.nickname && (
+                        <div className="text-sm text-gray-500">{child.nickname}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    function App() {
+      const [data] = React.useState(window.serverData);
+      const [filteredPeople, setFilteredPeople] = React.useState(data?.people || []);
+      const [expandedCards, setExpandedCards] = React.useState(new Set());
+
+      const handleSearch = (term) => {
+        if (!term) {
+          setFilteredPeople(data?.people || []);
+          return;
+        }
+
+        const filtered = data?.people.filter(person => 
+          person.firstName.includes(term) ||
+          person.lastName.includes(term)
+        );
+        setFilteredPeople(filtered);
+      };
+
+      const handleSelect = (person) => {
+        setFilteredPeople([person]);
+        setExpandedCards(new Set([person.id]));
+      };
+
+      const toggleCard = (personId) => {
+        setExpandedCards(prev => {
+          const next = new Set(prev);
+          if (next.has(personId)) {
+            next.delete(personId);
+          } else {
+            next.add(personId);
+          }
+          return next;
+        });
+      };
+
+      if (!data || !data.people) {
+        return (
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-center">לא נמצאו נתונים</div>
+          </div>
+        );
+      }
+
+      return (
+        <div 
+          className="w-full sm:w-11/12 md:w-3/4 mx-auto p-4 min-h-screen"
+        >
+          <h1 className="text-2xl font-bold text-center mb-6">המשפחה שלי</h1>
+          
+          <div className="mb-6">
+            <SearchBox 
+              onSearch={handleSearch}
+              onSelect={handleSelect}
+            />
+          </div>
+
+          <div>
+            {filteredPeople.map((person) => (
+              <FamilyCard 
+                key={person.id}
+                person={person}
+                allPeople={data.people}
+                relations={data.relations}
+                isExpanded={expandedCards.has(person.id)}
+                onToggle={toggleCard}
+              />
+            ))}
+          </div>
+        </div>
+      );
     }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
