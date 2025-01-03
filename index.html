@@ -10,6 +10,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
   <style>
     body { 
@@ -59,18 +61,18 @@
       };
 
       return (
-        <div className="relative">
+        <div className="position-relative">
           <input
             ref={inputRef}
             type="text"
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="חפש שם פרטי או שם משפחה..."
-            className="w-full p-2 rounded-lg border border-gray-300"
+            className="form-control"
           />
           
           {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border shadow-lg max-h-60 overflow-auto z-10">
+            <div className="position-absolute w-100 mt-1 bg-white rounded-lg border shadow-lg max-h-60 overflow-auto z-10">
               {suggestions.map((person) => (
                 <div
                   key={person.id}
@@ -119,7 +121,7 @@
           {/* כרטיס ראשי */}
           <div 
             onClick={() => onToggle(person.id)}
-            className={`bg-white rounded-lg shadow-lg p-4 cursor-pointer transition-all w-full 
+            className={`bg-white rounded-lg shadow-lg p-4 cursor-pointer transition-all w-100 
               ${isExpanded ? 'ring-2 ring-blue-500' : 'hover:bg-gray-50'}`}
           >
             {/* הורים בקטן למעלה */}
@@ -148,7 +150,7 @@
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500 font-medium">הורים:</div>
                   {parents.map(parent => (
-                    <div key={parent.id} className="bg-white rounded-lg shadow p-3 w-full">
+                    <div key={parent.id} className="bg-white rounded-lg shadow p-3 w-100">
                       <div className="font-medium">{parent.firstName} {parent.lastName}</div>
                       {parent.nickname && (
                         <div className="text-sm text-gray-500">{parent.nickname}</div>
@@ -161,20 +163,20 @@
               {/* אחים */}
               {siblings.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-sm text-gray-500 flex justify-between items-center">
+                  <div className="text-sm text-gray-500 d-flex justify-content-between align-items-center">
                     <span>אחים:</span>
                     <span className="text-xs text-gray-400">
                       {/* מספר האח הנוכחי מתוך הסך הכל */}
                       {siblings.length > 1 ? 'החלק לצדדים לאחים נוספים' : ''}
                     </span>
                   </div>
-                  <div className="relative">
+                  <div className="position-relative">
                     <div className="overflow-hidden">
-                      <div className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide">
+                      <div className="d-flex snap-x snap-mandatory overflow-x-auto scrollbar-hide">
                         {siblings.map(sibling => (
                           <div 
                             key={sibling.id}
-                            className="snap-center shrink-0 w-full scroll-smooth"
+                            className="snap-center shrink-0 w-100 scroll-smooth"
                           >
                             <div className="bg-gray-50 rounded-lg p-3 mx-1">
                               <div className="font-medium">
@@ -199,7 +201,7 @@
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500 font-medium">ילדים:</div>
                   {children.map(child => (
-                    <div key={child.id} className="bg-white rounded-lg shadow p-3 w-full">
+                    <div key={child.id} className="bg-white rounded-lg shadow p-3 w-100">
                       <div className="font-medium">{child.firstName} {child.lastName}</div>
                       {child.nickname && (
                         <div className="text-sm text-gray-500">{child.nickname}</div>
@@ -251,7 +253,7 @@
 
       if (!data || !data.people) {
         return (
-          <div className="flex justify-center items-center min-h-screen">
+          <div className="d-flex justify-content-center align-items-center min-vh-100">
             <div className="text-center">לא נמצאו נתונים</div>
           </div>
         );
@@ -259,7 +261,7 @@
 
       return (
         <div 
-          className="w-full sm:w-11/12 md:w-3/4 mx-auto p-4 min-h-screen"
+          className="w-100 sm:w-11/12 md:w-3/4 mx-auto p-4 min-vh-100"
         >
           <h1 className="text-2xl font-bold text-center mb-6">המשפחה שלי</h1>
           
