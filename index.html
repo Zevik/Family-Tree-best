@@ -36,6 +36,15 @@
     .expanded-section {
       margin-top: 15px;
     }
+    .age-display {
+      font-size: 0.85em;
+      color: #666;
+      margin-right: 0.5em;
+    }
+    .date-display {
+      font-size: 0.9em;
+      color: #555;
+    }
   </style>
 </head>
 
@@ -187,6 +196,16 @@
       return age;
     };
 
+    // הוספת פונקציית עזר לפורמוט תאריכים
+    const formatDate = (date) => {
+      if (!date) return null;
+      return new Date(date).toLocaleDateString('he-IL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
     const SpouseSection = ({ spouses }) => {
       if (!spouses.length) return null;
       
@@ -195,25 +214,34 @@
           <div className="text-lg font-medium text-gray-600">
             {spouses.length > 1 ? 'בני/בנות זוג:' : 'בן/בת זוג:'}
           </div>
-          {spouses.map(({ spouse, marriageDate, commonChildren }, index) => (
+          {spouses.map(({ spouse, marriageDate, commonChildren }) => (
             <div key={spouse.id} className="bg-white rounded-lg shadow-sm p-3">
-              <div className="font-medium">
+              <div className="font-medium d-flex align-items-center">
                 {spouse.firstName} {spouse.lastName}
                 {calculateAge(spouse.birthDate) && 
-                  <span className="text-sm text-gray-500 mr-1">
-                    ({calculateAge(spouse.birthDate)})
+                  <span className="age-display">
+                    (גיל: {calculateAge(spouse.birthDate)})
                   </span>
                 }
               </div>
               {marriageDate && (
-                <div className="text-sm text-gray-500">
-                  תאריך נישואין: {new Date(marriageDate).toLocaleDateString('he-IL')}
+                <div className="date-display mt-1">
+                  נישואין: {formatDate(marriageDate)}
                 </div>
               )}
               {commonChildren?.length > 0 && (
-                <div className="text-sm text-gray-500 mt-1">
-                  ילדים משותפים: {commonChildren.map(child => 
-                    `${child.firstName} ${child.lastName}`).join(', ')}
+                <div className="text-sm text-gray-500 mt-2">
+                  ילדים משותפים: 
+                  {commonChildren.map(child => (
+                    <span key={child.id} className="d-block mr-2">
+                      {child.firstName} {child.lastName}
+                      {calculateAge(child.birthDate) && 
+                        <span className="age-display">
+                          (גיל: {calculateAge(child.birthDate)})
+                        </span>
+                      }
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
