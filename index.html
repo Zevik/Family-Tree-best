@@ -298,7 +298,7 @@
         debugLog('birthDate String:', birthDate);
         // Split the date string into its components
         const [year, month, day] = birthDate.split('-').map(Number);
-        birthDateObj = new Date(year, month - 1, day);
+        birthDateObj = new Date(Date.UTC(year, month - 1, day));
       } else {
         birthDateObj = new Date(birthDate);
       }
@@ -619,7 +619,7 @@ const FamilyCard = ({ person, allPeople, relations, onSelectPerson }) => {
         // Split the date string into its components
         const [year, month, day] = birthDate.split('-').map(Number);
           
-          birthDateObj = new Date(year, month - 1, day);
+          birthDateObj = new Date(Date.UTC(year, month - 1, day));
 
       } else {
         birthDateObj = new Date(birthDate);
