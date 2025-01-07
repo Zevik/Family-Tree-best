@@ -334,11 +334,11 @@
           return null;
         }
 
-        // Format as dd/mm/yyyy
+        // Format as dd.mm.yyyy
         const formattedDay = day.toString().padStart(2, '0');
         const formattedMonth = month.toString().padStart(2, '0');
         
-        const result = `${formattedDay}/${formattedMonth}/${year}`;
+        const result = `${formattedDay}.${formattedMonth}.${year}`;
         debugLog('Final formatted result:', result);
         return result;
 
