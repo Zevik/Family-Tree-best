@@ -313,12 +313,34 @@
 
     // הוספת פונקציית עזר לפורמוט תאריכים
     const formatDate = (date) => {
-      if (!date) return null;
-      return new Date(date).toLocaleDateString('he-IL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      debugLog('Formatting date:', date);
+      if (!date) {
+        debugLog('No date provided');
+        return null;
+      }
+    
+      try {
+        let dateObj = new Date(date);
+        debugLog('Date object created:', dateObj);
+        
+        // Check if date is valid
+        if (isNaN(dateObj.getTime())) {
+          debugLog('Invalid date');
+          return null;
+        }
+    
+        const result = dateObj.toLocaleDateString('he-IL', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        debugLog('Formatted date result:', result);
+        return result;
+      } catch (error) {
+        debugLog('Error formatting date:', error);
+        return null;
+      }
     };
 
     const SpouseSection = ({ spouses }) => {
