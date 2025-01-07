@@ -45,6 +45,10 @@
       font-size: 0.9em;
       color: #555;
     }
+    .hebrew-date {
+      color: #f97316;  /* Tailwind's orange-500 */
+      font-size: 0.9em;
+    }
   </style>
 </head>
 
@@ -311,34 +315,35 @@
       return age;
     };
 
-    // הוספת פונקציית עזר לפורמוט תאריכים
+    // עדכון פונקציית פורמוט תאריכים עם טיפול מפורט יותר באזורי זמן ולוגים
     const formatDate = (date) => {
-      debugLog('Formatting date:', date);
+      debugLog('Raw input date:', date);
       if (!date) {
         debugLog('No date provided');
         return null;
       }
     
       try {
-        let dateObj = new Date(date);
-        debugLog('Date object created:', dateObj);
-        
-        // Check if date is valid
-        if (isNaN(dateObj.getTime())) {
-          debugLog('Invalid date');
+        // Parse the date parts
+        const [year, month, day] = date.split('-').map(Number);
+        debugLog('Split date parts:', { year, month, day });
+
+        // Validate the parts
+        if (!year || !month || !day) {
+          debugLog('Invalid date parts');
           return null;
         }
-    
-        const result = dateObj.toLocaleDateString('he-IL', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+
+        // Format as dd/mm/yyyy
+        const formattedDay = day.toString().padStart(2, '0');
+        const formattedMonth = month.toString().padStart(2, '0');
         
-        debugLog('Formatted date result:', result);
+        const result = `${formattedDay}/${formattedMonth}/${year}`;
+        debugLog('Final formatted result:', result);
         return result;
+
       } catch (error) {
-        debugLog('Error formatting date:', error);
+        debugLog('Error in formatDate:', error);
         return null;
       }
     };
@@ -447,7 +452,7 @@ const FamilyCard = ({ person, allPeople, relations, onSelectPerson }) => {
           <span className="date-display">
             {person.birthDate && `(נולד: ${formatDate(person.birthDate)}`}
             {person.birthDate && person.hebrewBirthDate && " / "}
-            {person.hebrewBirthDate && person.hebrewBirthDate}
+            {person.hebrewBirthDate && <span className="hebrew-date">{person.hebrewBirthDate}</span>}
             {(person.birthDate || person.hebrewBirthDate) && ")"}
           </span>
         )}
