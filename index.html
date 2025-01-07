@@ -115,6 +115,7 @@
 
     // הוספת פונקציית עזר לחישוב קשרי משפחה
     const calculateFamilyRelations = (personId, relations, allPeople) => {
+      debugLog('Calculate relations for person:', personId);
       const directRelations = {
         parents: [],
         children: [],
@@ -137,83 +138,140 @@
             parentIds.add(parent.id);
           }
         });
-        directRelations.parents = Array.from(parentIds).map(id => allPeople.find(p => p.id === id));
-        
+      directRelations.parents = Array.from(parentIds).map(id => allPeople.find(p => p.id === id));
 
       // מציאת ילדים
-      directRelations.children = relations
+      const childIds = new Set();
+      relations
         .filter(r => r.relationType === 'parent' && r.personId1 === personId)
-        .map(r => allPeople.find(p => p.id === r.personId2));
+        .forEach(r => {
+          const child = allPeople.find(p => p.id === r.personId2);
+          if (child) {
+            childIds.add(child.id);
+          }
+        });
+      directRelations.children = Array.from(childIds).map(id => allPeople.find(p => p.id === id));
 
       // מציאת אחים (מי שחולק את אותם הורים)
-    const siblingIds = new Set();
-    const parentIdsForSiblings = directRelations.parents.map(p => p.id);
-
-    relations
-      .filter(r =>
-        r.relationType === "parent" &&
-        parentIdsForSiblings.includes(r.personId1) &&
-        r.personId2 !== personId
-      )
-      .forEach(r => {
-        const sibling = allPeople.find(p => p.id === r.personId2);
-        if (sibling) {
+      const siblingIds = new Set();
+      const parentIdsForSiblings = directRelations.parents.map(p => p.id);
+      relations
+        .filter(r =>
+          r.relationType === "parent" &&
+          parentIdsForSiblings.includes(r.personId1) &&
+          r.personId2 !== personId
+        )
+        .forEach(r => {
+          const sibling = allPeople.find(p => p.id === r.personId2);
+          if (sibling) {
             siblingIds.add(sibling.id);
-        }
-      });
-
-    directRelations.siblings = Array.from(siblingIds).map(id => allPeople.find(p => p.id === id));
+          }
+        });
+      directRelations.siblings = Array.from(siblingIds).map(id => allPeople.find(p => p.id === id));
 
       // מציאת סבים (הורי ההורים)
-     const grandparentIds = new Set()
-     relations
-      .filter(r => r.relationType === 'parent' &&
-                    directRelations.parents.map(p => p.id).includes(r.personId2))
-     .forEach(r => {
-       const grandparent = allPeople.find(p => p.id === r.personId1)
-       if (grandparent){
-        grandparentIds.add(grandparent.id)
-       }
-     });
-    directRelations.grandparents = Array.from(grandparentIds).map(id => allPeople.find(p => p.id === id));
-
+      const grandparentIds = new Set();
+      relations
+        .filter(r => r.relationType === 'parent' &&
+                      directRelations.parents.map(p => p.id).includes(r.personId2))
+        .forEach(r => {
+          const grandparent = allPeople.find(p => p.id === r.personId1);
+          if (grandparent) {
+            grandparentIds.add(grandparent.id);
+          }
+        });
+      directRelations.grandparents = Array.from(grandparentIds).map(id => allPeople.find(p => p.id === id));
 
       // מציאת נכדים (ילדי הילדים)
-      directRelations.grandchildren = relations
+      const grandchildIds = new Set();
+      relations
         .filter(r => r.relationType === 'parent' && 
                     directRelations.children.map(c => c.id).includes(r.personId1))
-        .map(r => allPeople.find(p => p.id === r.personId2));
+        .forEach(r => {
+          const grandchild = allPeople.find(p => p.id === r.personId2);
+          if (grandchild) {
+            grandchildIds.add(grandchild.id);
+          }
+        });
+      directRelations.grandchildren = Array.from(grandchildIds).map(id => allPeople.find(p => p.id === id));
 
       // מציאת דודים (אחי ההורים)
-     const uncleAuntIds = new Set()
-     const grandparentIdsForUncles = directRelations.grandparents.map(gp => gp.id);
-     const parentIdsForUncles = directRelations.parents.map(p => p.id);
-    relations
-      .filter(r => r.relationType === 'parent' && 
-                    grandparentIdsForUncles.includes(r.personId1) &&
-                    !parentIdsForUncles.includes(r.personId2))
-    .forEach(r => {
-      const uncleAunt = allPeople.find(p => p.id === r.personId2);
-      if (uncleAunt) {
-        uncleAuntIds.add(uncleAunt.id)
-      }
-    });
+      const uncleAuntIds = new Set();
+      const grandparentIdsForUncles = directRelations.grandparents.map(gp => gp.id);
+      const parentIdsForUncles = directRelations.parents.map(p => p.id);
+      relations
+        .filter(r => r.relationType === 'parent' && 
+                      grandparentIdsForUncles.includes(r.personId1) &&
+                      !parentIdsForUncles.includes(r.personId2))
+        .forEach(r => {
+          const uncleAunt = allPeople.find(p => p.id === r.personId2);
+          if (uncleAunt) {
+            uncleAuntIds.add(uncleAunt.id);
+          }
+        });
+      directRelations.unclesAunts = Array.from(uncleAuntIds).map(id => allPeople.find(p => p.id === id));
 
-    directRelations.unclesAunts = Array.from(uncleAuntIds).map(id => allPeople.find(p => p.id === id));
-    
-    // מציאת בני זוג
-     directRelations.spouses = relations
-        .filter(r => r.relationType === 'spouse' &&
-                  (r.personId1 === personId || r.personId2 === personId))
-        .map(r => ({
-          spouse: allPeople.find(p => p.id === (r.personId1 === personId ? r.personId2 : r.personId1)),
-          marriageDate: r.marriageDate,
-          commonChildren: relations
-            .filter(cr => cr.relationType === 'parent' &&
-              (cr.personId1 === personId || cr.personId1 === r.personId2))
-            .map(cr => allPeople.find(p => p.id === cr.personId2))
-            .filter(child => child !== undefined)
-        }));
+      // מציאת בני זוג עם לוגים מפורטים
+      directRelations.spouses = (() => {
+        const spouseIds = new Set(); // Set לשמירת ID של בני זוג שכבר נמצאו
+        return relations
+          .filter(r => {
+            if (r.relationType !== 'spouse') return false;
+            
+            const spouseId = r.personId1 === personId ? r.personId2 : r.personId1;
+            
+            // אם כבר מצאנו את בן/בת הזוג הזה, נדלג
+            if (spouseIds.has(spouseId)) {
+              debugLog('Skipping duplicate spouse:', spouseId);
+              return false;
+            }
+            
+            spouseIds.add(spouseId);
+            return true;
+          })
+          .map(r => {
+            const spouseId = r.personId1 === personId ? r.personId2 : r.personId1;
+            const spouse = allPeople.find(p => p.id === spouseId);
+            
+            // מציאת ילדים משותפים - שיפור הלוגיקה
+            const commonChildren = relations
+              .filter(cr => {
+                // רק יחסי הורה-ילד
+                if (cr.relationType !== 'parent') return false;
+                
+                // מצא את כל הילדים של האדם הנוכחי
+                const isChildOfPerson = cr.personId1 === personId && cr.personId2;
+                if (!isChildOfPerson) return false;
+                
+                // בדוק אם גם בן/בת הזוג הוא הורה של אותו ילד
+                const childId = cr.personId2;
+                const hasSpouseAsParent = relations.some(r2 => 
+                  r2.relationType === 'parent' && 
+                  r2.personId1 === spouseId && 
+                  r2.personId2 === childId
+                );
+                
+                debugLog('Checking child relation:', {
+                  childId,
+                  isChildOfPerson,
+                  hasSpouseAsParent
+                });
+                
+                return hasSpouseAsParent;
+              })
+              .map(cr => allPeople.find(p => p.id === cr.personId2))
+              .filter(child => child !== undefined);
+
+            debugLog('Found common children:', commonChildren);
+
+            return {
+              spouse,
+              marriageDate: r.marriageDate,
+              commonChildren: Array.from(new Set(commonChildren.map(c => c.id)))
+                .map(id => commonChildren.find(c => c.id === id))
+            };
+          });
+      })();
 
       return directRelations;
     };
@@ -233,17 +291,15 @@
 
       let birthDateObj;
       if (typeof birthDate === 'string') {
-          debugLog('birthDate String:', birthDate);
+        debugLog('birthDate String:', birthDate);
         // Split the date string into its components
         const [year, month, day] = birthDate.split('-').map(Number);
-          
-          birthDateObj = new Date(year, month - 1, day);
-
+        birthDateObj = new Date(year, month - 1, day);
       } else {
         birthDateObj = new Date(birthDate);
       }
      
-     debugLog('birthDateObj:', birthDateObj);
+      debugLog('birthDateObj:', birthDateObj);
       const today = new Date();
       let age = today.getFullYear() - birthDateObj.getFullYear();
       const monthDiff = today.getMonth() - birthDateObj.getMonth();
@@ -273,116 +329,135 @@
           <div className="text-lg font-medium text-gray-600">
             {spouses.length > 1 ? 'בני/בנות זוג:' : 'בן/בת זוג:'}
           </div>
-          {spouses.map(({ spouse, marriageDate, commonChildren }) => (
-            <div key={spouse.id} className="bg-white rounded-lg shadow-sm p-3">
-              <div className="font-medium d-flex align-items-center">
-                {spouse.firstName} {spouse.lastName}
-                {calculateAge(spouse.birthDate) && 
-                  <span className="age-display">
-                    (גיל: {calculateAge(spouse.birthDate)})
-                  </span>
-                }
-              </div>
-              {marriageDate && (
-                <div className="date-display mt-1">
-                  נישואין: {formatDate(marriageDate)}
-                </div>
-              )}
-              {commonChildren?.length > 0 && (
-                <div className="text-sm text-gray-500 mt-2">
-                  ילדים משותפים: 
-                  {commonChildren.map(child => (
-                    <span key={child.id} className="d-block mr-2">
-                      {child.firstName} {child.lastName}
-                      {calculateAge(child.birthDate) && 
-                        <span className="age-display">
-                          (גיל: {calculateAge(child.birthDate)})
-                        </span>
-                      }
+          {spouses.map(({ spouse, marriageDate, commonChildren }) => {
+            debugLog('Rendering spouse section:', { spouse, commonChildren });
+            
+            // שימוש ב-Set לסינון כפילויות
+            const uniqueChildrenIds = new Set();
+            const uniqueChildren = commonChildren?.filter(child => {
+              if (uniqueChildrenIds.has(child.id)) {
+                debugLog('Duplicate child found:', child);
+                return false;
+              }
+              uniqueChildrenIds.add(child.id);
+              return true;
+            });
+            
+            debugLog('Unique children:', uniqueChildren);
+            
+            return (
+              <div key={spouse.id} className="bg-white rounded-lg shadow-sm p-3">
+                <div className="font-medium d-flex align-items-center">
+                  {spouse.firstName} {spouse.lastName}
+                  {calculateAge(spouse.birthDate) && 
+                    <span className="age-display">
+                      (גיל: {calculateAge(spouse.birthDate)})
                     </span>
-                  ))}
+                  }
                 </div>
-              )}
-            </div>
+                {marriageDate && (
+                  <div className="date-display mt-1">
+                    נישואין: {formatDate(marriageDate)}
+                  </div>
+                )}
+                {uniqueChildren?.length > 0 && (
+                  <div className="text-sm text-gray-500 mt-2">
+                    ילדים משותפים: 
+                    {uniqueChildren.map(child => (
+                      <span key={child.id} className="d-block mr-2">
+                        {child.firstName} {child.lastName}
+                        {calculateAge(child.birthDate) && 
+                          <span className="age-display">
+                            (גיל: {calculateAge(child.birthDate)})
+                          </span>
+                        }
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+const NameButton = ({ person, onClick }) => (
+  <button 
+    onClick={() => onClick(person)}
+    className="text-blue-600 hover:text-blue-800 hover:underline font-normal px-1 py-0 mx-0"
+  >
+    {person.firstName} {person.lastName}
+  </button>
+);
+
+const FamilyCard = ({ person, allPeople, relations, onSelectPerson }) => {
+  const familyRelations = calculateFamilyRelations(person.id, relations, allPeople);
+
+  const getHebrewDate = (date) => {
+    if (!date) return null;
+    const options = { year: 'numeric', month: 'long', day: 'numeric', calendar: 'hebrew' };
+    return new Date(date).toLocaleDateString('he-IL', options);
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-4 mb-4 w-full">
+      {/* הורים */}
+      {familyRelations.parents.length > 0 && (
+        <div className="text-sm text-gray-500 mb-2">
+          הורים: {familyRelations.parents.map((p, i) => (
+            <React.Fragment key={p.id}>
+              {i > 0 && " | "}
+              <NameButton person={p} onClick={onSelectPerson} />
+            </React.Fragment>
           ))}
         </div>
-      );
-    };
+      )}
 
-    const FamilyCard = ({ person, allPeople, relations, isExpanded, onToggle }) => {
-      debugLog('Person data:', person);
-        console.log('person in family card', person); // log the person object here
-      const familyRelations = calculateFamilyRelations(person.id, relations, allPeople);
-      const age = calculateAge(person.birthDate);
-      debugLog('Person age:', age);
-      
-      return (
-        <div className="mb-4">
-          {/* כרטיס ראשי */}
-          <div 
-            onClick={() => onToggle(person.id)}
-            className={`bg-white rounded-lg shadow-lg p-4 cursor-pointer transition-all w-100 
-              ${isExpanded ? 'ring-2 ring-blue-500' : 'hover:bg-gray-50'}`}
-          >
-            {/* תצוגת מידע בסיסי */}
-            <div className="flex justify-between items-center">
-              <div className="text-xl font-medium">
-                {person.firstName} {person.lastName}
-                {age && <span className="text-sm text-gray-500 mr-2">({age})</span>}
-              </div>
-            </div>
-            
-            {/* הצגת בן/בת זוג בכרטיס הראשי */}
-            {familyRelations.spouses.length > 0 && (
-              <div className="text-sm text-gray-500 mt-1">
-                {familyRelations.spouses.length > 1 ? 'בני/בנות זוג' : 'בן/בת זוג'}: 
-                {familyRelations.spouses.map(({spouse}) => 
-                  `${spouse.firstName} ${spouse.lastName}`).join(', ')}
-              </div>
+      {/* שם האדם */}
+      <div className="text-xl font-medium mb-2">
+        {person.firstName} {person.lastName}
+        {person.deathDate ? (
+          <span className="date-display">
+            (נפטר: {formatDate(person.deathDate)})
+          </span>
+        ) : (
+          <>
+            {person.birthDate && (
+              <span className="date-display">
+                (נולד: {formatDate(person.birthDate)} / {getHebrewDate(person.birthDate)})
+              </span>
             )}
+          </>
+        )}
+      </div>
 
-            {familyRelations.parents.length > 0 && (
-              <div className="text-sm text-gray-500">
-                הורים: {familyRelations.parents.map(p => `${p.firstName} ${p.lastName}`).join(', ')}
-              </div>
-            )}
-          </div>
-
-          {/* תצוגה מורחבת */}
-          {isExpanded && (
-            <div className="mt-2 space-y-3">
-              {/* קומפוננטה חדשה להצגת בני זוג */}
-              <SpouseSection spouses={familyRelations.spouses} />
-              
-              {/* שאר הקשרים המשפחתיים */}
-              {Object.entries(familyRelations).map(([relation, members]) => {
-                if (relation === 'spouses' || members.length === 0) return null;
-                
-                return (
-                  <div key={relation} className="space-y-2">
-                    <div className="text-sm text-gray-500 font-medium">
-                      {getRelationTitle(relation)}:
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {members.map(member => (
-                        <div key={member.id} className="bg-white rounded-lg shadow p-3">
-                          {member.firstName} {member.lastName}
-                          {calculateAge(member.birthDate) && 
-                            <span className="text-sm text-gray-500 mr-1">
-                              ({calculateAge(member.birthDate)})
-                            </span>
-                          }
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {/* ילדים */}
+      {familyRelations.children.length > 0 && (
+        <div className="text-sm text-gray-500">
+          ילדים: {familyRelations.children.map((c, i) => (
+            <React.Fragment key={c.id}>
+              {i > 0 && " | "}
+              <NameButton person={c} onClick={onSelectPerson} />
+            </React.Fragment>
+          ))}
         </div>
-      );
-    };
+      )}
+
+      {/* אחים */}
+      {familyRelations.siblings.length > 0 && (
+        <div className="text-sm text-gray-500">
+          אחים: {familyRelations.siblings.map((s, i) => (
+            <React.Fragment key={s.id}>
+              {i > 0 && " | "}
+              <NameButton person={s} onClick={onSelectPerson} />
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
     // פונקציית עזר להמרת שמות היחסים לעברית
     const getRelationTitle = (relation) => {
@@ -402,6 +477,31 @@
 
     function App() {
       const [data] = React.useState(window.serverData);
+
+      const handlePersonSelect = (selectedPerson) => {
+        // מצא את המיקום של הכרטיס של האדם שנבחר
+        const cardElement = document.getElementById(`person-${selectedPerson.id}`);
+        if (cardElement) {
+          cardElement.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          // אם הכרטיס לא מוצג, הצג אותו
+          setFilteredPeople(prev => {
+            // בדוק אם האדם כבר מוצג
+            if (!prev.find(p => p.id === selectedPerson.id)) {
+              return [...prev, selectedPerson];
+            }
+            return prev;
+          });
+          // המתן מעט כדי שהכרטיס יתווסף ואז גלול אליו
+          setTimeout(() => {
+            const newCard = document.getElementById(`person-${selectedPerson.id}`);
+            if (newCard) {
+              newCard.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 100);
+        }
+      };
+
       debugLog('Server data:', data);
       const [filteredPeople, setFilteredPeople] = React.useState(data?.people || []);
       const [expandedCards, setExpandedCards] = React.useState(new Set());
@@ -460,14 +560,14 @@
 
           <div>
             {filteredPeople.map((person) => (
-              <FamilyCard 
-                key={person.id}
-                person={person}
-                allPeople={data.people}
-                relations={data.relations}
-                isExpanded={expandedCards.has(person.id)}
-                onToggle={toggleCard}
-              />
+              <div key={person.id} id={`person-${person.id}`}>
+                <FamilyCard 
+                  person={person}
+                  allPeople={data.people}
+                  relations={data.relations}
+                  onSelectPerson={handlePersonSelect}
+                />
+              </div>
             ))}
           </div>
         </div>
