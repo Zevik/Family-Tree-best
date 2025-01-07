@@ -422,13 +422,12 @@ const FamilyCard = ({ person, allPeople, relations, onSelectPerson }) => {
             (נפטר: {formatDate(person.deathDate)})
           </span>
         ) : (
-          <>
-            {person.birthDate && (
-              <span className="date-display">
-                (נולד: {formatDate(person.birthDate)} / {getHebrewDate(person.birthDate)})
-              </span>
-            )}
-          </>
+          <span className="date-display">
+            {person.birthDate && `(נולד: ${formatDate(person.birthDate)}`}
+            {person.birthDate && person.hebrewBirthDate && " / "}
+            {person.hebrewBirthDate && person.hebrewBirthDate}
+            {(person.birthDate || person.hebrewBirthDate) && ")"}
+          </span>
         )}
       </div>
 
