@@ -1,3 +1,4 @@
+// Code.gs
 function doGet() {
   const template = HtmlService.createTemplateFromFile('Index');
   return template.evaluate()
@@ -22,6 +23,8 @@ function getData() {
   const lastNameIndex = headers.indexOf('שם משפחה');
   const hebrewDateIndex = headers.indexOf('תאריך לידה עברי');
   const gregDateIndex = headers.indexOf('תאריך לידה');
+  const hebrewDeathDateIndex = headers.indexOf('תאריך פטירה עברי');
+  const gregDeathDateIndex = headers.indexOf('תאריך פטירה');
   const fatherIdIndex = headers.indexOf('אבא');
   const motherIdIndex = headers.indexOf('אמא');
   const spouseIdIndex = headers.indexOf('בן/בת זוג');
@@ -42,7 +45,9 @@ function getData() {
         motherId: row[motherIdIndex]?.toString(),
         spouseId: row[spouseIdIndex]?.toString(),
         hebrewDate: row[hebrewDateIndex],
-        gregorianDate: row[gregDateIndex]
+        gregorianDate: row[gregDateIndex],
+        hebrewDeathDate: row[hebrewDeathDateIndex],
+        gregorianDeathDate: row[gregDeathDateIndex]
       });
     }
   });
@@ -125,3 +130,4 @@ function getData() {
   
   return data;
 }
+
