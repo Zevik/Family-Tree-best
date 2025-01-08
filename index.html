@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html dir="rtl">
   <head>
@@ -62,16 +63,28 @@
         }
       };
 
-      function formatDate(person) {
+      function formatDate(person, type = 'birth') {
         let dateStr = '';
-        if (person.hebrewDate) {
-          dateStr += person.hebrewDate;
-        }
-        if (person.hebrewDate && person.gregorianDate) {
-          dateStr += ' | ';
-        }
-        if (person.gregorianDate) {
-          dateStr += person.gregorianDate;
+        if (type === 'birth') {
+          if (person.hebrewDate) {
+            dateStr += person.hebrewDate;
+          }
+          if (person.hebrewDate && person.gregorianDate) {
+            dateStr += ' | ';
+          }
+          if (person.gregorianDate) {
+            dateStr += person.gregorianDate;
+          }
+        } else if (type === 'death') {
+          if (person.hebrewDeathDate) {
+            dateStr += person.hebrewDeathDate;
+          }
+          if (person.hebrewDeathDate && person.gregorianDeathDate) {
+            dateStr += ' | ';
+          }
+          if (person.gregorianDeathDate) {
+            dateStr += person.gregorianDeathDate;
+          }
         }
         return dateStr;
       }
@@ -149,9 +162,14 @@
               
               <h2 class="text-xl font-bold mb-2">${person.firstName} ${person.lastName}</h2>
               
-              ${dateDisplay ? `
-                <p class="text-gray-600 mb-2">תאריך לידה: <strong>${dateDisplay}</strong></p>
-              ` : ''}
+              <div class="text-gray-600 mb-2">
+                ${dateDisplay ? `
+                  <p>תאריך לידה: <strong>${dateDisplay}</strong></p>
+                ` : ''}
+                ${person.hebrewDeathDate || person.gregorianDeathDate ? `
+                  <p class="mt-1">תאריך פטירה: <strong>${formatDate(person, 'death')}</strong></p>
+                ` : ''}
+              </div>
               
               ${person.spouse ? `
                 <div class="text-sm text-gray-500 mb-2 border-t pt-2">
