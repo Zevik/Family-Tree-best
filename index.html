@@ -1,4 +1,5 @@
-
+// Index.html
+/*
 <!DOCTYPE html>
 <html dir="rtl">
   <head>
@@ -90,8 +91,13 @@
       }
       
       function createNameLink(name, id) {
-        if (!id) return name;
-        return `<span class="name-link" onclick="window.scrollToCard('${id}')">${name}</span>`;
+        // Always show the name, but only make it clickable if the person exists and isn't hidden
+        if (!window.allPeople) return name;
+        const person = window.allPeople.find(p => p.id === id);
+        if (person && !person.isHidden) {
+          return `<span class="name-link" onclick="window.scrollToCard('${id}')">${name}</span>`;
+        }
+        return name;
       }
       
       function formatParents(parents, parentIds) {
@@ -108,7 +114,7 @@
       function formatChildren(children) {
         if (!children || children.length === 0) return [];
         const childrenLinks = children
-          .filter(child => child && child.name && child.id)
+          .filter(child => child && child.name)
           .map(child => createNameLink(child.name, child.id))
           .join(', ');
         return [`ילדים: ${childrenLinks}`];
@@ -119,7 +125,7 @@
         
         if (siblings.fullSiblings && siblings.fullSiblings.length > 0) {
           const names = siblings.fullSiblings
-            .filter(s => s && s.name && s.id)
+            .filter(s => s && s.name)
             .map(s => createNameLink(s.name, s.id))
             .join(', ');
           parts.push(`אחים/אחיות: ${names}`);
@@ -143,7 +149,8 @@
       }
       
       function createCard(person) {
-        const dateDisplay = formatDate(person);
+        const dateDisplay = formatDate(person, 'birth');
+        const deathDisplay = formatDate(person, 'death');
         const parentsDisplay = formatParents(person.parents, {
           fatherId: person.fatherId,
           motherId: person.motherId
@@ -163,19 +170,15 @@
               <h2 class="text-xl font-bold mb-2">${person.firstName} ${person.lastName}</h2>
               
               <div class="text-gray-600 mb-2">
-                ${dateDisplay ? `
-                  <p>תאריך לידה: <strong>${dateDisplay}</strong></p>
-                ` : ''}
-                ${person.hebrewDeathDate || person.gregorianDeathDate ? `
-                  <p class="mt-1">תאריך פטירה: <strong>${formatDate(person, 'death')}</strong></p>
-                ` : ''}
+                ${dateDisplay ? `<p>תאריך לידה: <strong>${dateDisplay}</strong></p>` : ''}
+                ${deathDisplay ? `<p class="mt-1">תאריך פטירה: <strong>${deathDisplay}</strong></p>` : ''}
               </div>
               
-              ${person.spouse ? `
-                <div class="text-sm text-gray-500 mb-2 border-t pt-2">
-                  <p>בן/בת זוג: ${createNameLink(person.spouse, person.spouseId)}</p>
-                </div>
-              ` : ''}
+${person.spouse ? `
+  <div class="text-sm text-gray-500 mb-2 border-t pt-2">
+    <p>בן/בת זוג: ${createNameLink(person.spouse, person.spouseId)}${person.marriageDate ? ` (${person.marriageDate})` : ''}</p>
+  </div>
+` : ''}
               
               ${childrenLines.length > 0 ? `
                 <div class="text-sm text-gray-500 mb-2">
@@ -203,7 +206,8 @@
         google.script.run
           .withSuccessHandler(function(data) {
             loading.style.display = 'none';
-            console.log('Data received:', data); // Debug log
+            // Store all people data globally for reference
+            window.allPeople = data;
             
             if (!data || data.length === 0) {
               container.innerHTML = `
