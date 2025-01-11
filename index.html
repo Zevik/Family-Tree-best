@@ -1,642 +1,575 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="he">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>המשפחה שלי</title>
-  
-  <!-- Add jQuery before Bootstrap -->
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
-  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
-  <style>
-    body { 
-      font-family: 'Assistant', sans-serif; 
-      background-color: #f3f4f6;
-      overscroll-behavior: none; /* מניעת pull-to-refresh */
-      font-size: 18px;
-    }
-    input { 
-      font-size: 18px;
-      padding: 12px !important;
-    }
-    .card-text {
-      font-size: 1.2rem;
-    }
-    .family-card {
-      margin: 15px 0;
-      padding: 15px;
-    }
-    .expanded-section {
-      margin-top: 15px;
-    }
-    .age-display {
-      font-size: 0.85em;
-      color: #666;
-      margin-right: 0.5em;
-    }
-    .date-display {
-      font-size: 0.9em;
-      color: #555;
-    }
-    .hebrew-date {
-      color: #f97316;  /* Tailwind's orange-500 */
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-
-<body class="text-right">
-  <script>
-    window.serverData = <?!= serverData ?>;
-  </script>
-
-  <div id="root"></div>
-
-  <script type="text/babel">
-    const SearchBox = ({ onSearch, onSelect }) => {
-      const [searchTerm, setSearchTerm] = React.useState('');
-      const [suggestions, setSuggestions] = React.useState([]);
-      const inputRef = React.useRef(null);
-
-      const handleSearch = (value) => {
-        setSearchTerm(value);
-        if (!value.trim()) {
-          setSuggestions([]);
-          onSearch('');
-          return;
+<html dir="rtl">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <title>עץ משפחה</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+      .card {
+        transition: transform 0.2s;
+        position: relative;
+      }
+      .card:hover {
+        transform: translateY(-5px);
+      }
+      .name-link {
+        color: #2563eb;
+        cursor: pointer;
+      }
+      .name-link:hover {
+        color: #1d4ed8;
+        opacity: 0.8;
+      }
+      .highlighted {
+        animation: highlight 2s;
+      }
+      @keyframes highlight {
+        0% { background-color: #93c5fd; }
+        100% { background-color: white; }
+      }
+      .add-button {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        cursor: pointer;
+        z-index: 10;
+        background: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 600px;
+        border-radius: 8px;
+        position: relative;
+      }
+       .close-button {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
         }
-
-        const filtered = window.serverData.people.filter(person => 
-          person.firstName.includes(value) ||
-          person.lastName.includes(value)
-        );
-        
-        setSuggestions(filtered);
-        onSearch(value);
-      };
-
-      const handleSelect = (person) => {
-        setSearchTerm(`${person.firstName} ${person.lastName}`);
-        setSuggestions([]);
-        onSelect(person);
-        inputRef.current?.blur();
-      };
-
-      return (
-        <div className="position-relative">
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="חפש שם פרטי או שם משפחה..."
-            className="form-control"
-          />
-          
-          {suggestions.length > 0 && (
-            <div className="position-absolute w-100 mt-1 bg-white rounded-lg border shadow-lg max-h-60 overflow-auto z-10">
-              {suggestions.map((person) => (
-                <div
-                  key={person.id}
-                  onClick={() => handleSelect(person)}
-                  className="p-2 hover:bg-gray-50 cursor-pointer"
-                >
-                  {person.firstName} {person.lastName}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    // הוספת פונקציית עזר לחישוב קשרי משפחה
-    const calculateFamilyRelations = (personId, relations, allPeople) => {
-      debugLog('Calculate relations for person:', personId);
-      const directRelations = {
-        parents: [],
-        children: [],
-        siblings: [],
-        spouses: [],
-        grandparents: [],
-        grandchildren: [],
-        cousins: [],
-        unclesAunts: [],
-        nephewsNieces: []
-      };
-
-      // מציאת הורים
-      const parentIds = new Set();
-      relations
-        .filter(r => r.relationType === 'parent' && r.personId2 === personId)
-        .forEach(r => {
-          const parent = allPeople.find(p => p.id === r.personId1);
-          if (parent) {
-            parentIds.add(parent.id);
-          }
-        });
-      directRelations.parents = Array.from(parentIds).map(id => allPeople.find(p => p.id === id));
-
-      // מציאת ילדים
-      const childIds = new Set();
-      relations
-        .filter(r => r.relationType === 'parent' && r.personId1 === personId)
-        .forEach(r => {
-          const child = allPeople.find(p => p.id === r.personId2);
-          if (child) {
-            childIds.add(child.id);
-          }
-        });
-      directRelations.children = Array.from(childIds).map(id => allPeople.find(p => p.id === id));
-
-      // מציאת אחים (מי שחולק את אותם הורים)
-      const siblingIds = new Set();
-      const parentIdsForSiblings = directRelations.parents.map(p => p.id);
-      relations
-        .filter(r =>
-          r.relationType === "parent" &&
-          parentIdsForSiblings.includes(r.personId1) &&
-          r.personId2 !== personId
-        )
-        .forEach(r => {
-          const sibling = allPeople.find(p => p.id === r.personId2);
-          if (sibling) {
-            siblingIds.add(sibling.id);
-          }
-        });
-      directRelations.siblings = Array.from(siblingIds).map(id => allPeople.find(p => p.id === id));
-
-      // מציאת סבים (הורי ההורים)
-      const grandparentIds = new Set();
-      relations
-        .filter(r => r.relationType === 'parent' &&
-                      directRelations.parents.map(p => p.id).includes(r.personId2))
-        .forEach(r => {
-          const grandparent = allPeople.find(p => p.id === r.personId1);
-          if (grandparent) {
-            grandparentIds.add(grandparent.id);
-          }
-        });
-      directRelations.grandparents = Array.from(grandparentIds).map(id => allPeople.find(p => p.id === id));
-
-      // מציאת נכדים (ילדי הילדים)
-      const grandchildIds = new Set();
-      relations
-        .filter(r => r.relationType === 'parent' && 
-                    directRelations.children.map(c => c.id).includes(r.personId1))
-        .forEach(r => {
-          const grandchild = allPeople.find(p => p.id === r.personId2);
-          if (grandchild) {
-            grandchildIds.add(grandchild.id);
-          }
-        });
-      directRelations.grandchildren = Array.from(grandchildIds).map(id => allPeople.find(p => p.id === id));
-
-      // מציאת דודים (אחי ההורים)
-      const uncleAuntIds = new Set();
-      const grandparentIdsForUncles = directRelations.grandparents.map(gp => gp.id);
-      const parentIdsForUncles = directRelations.parents.map(p => p.id);
-      relations
-        .filter(r => r.relationType === 'parent' && 
-                      grandparentIdsForUncles.includes(r.personId1) &&
-                      !parentIdsForUncles.includes(r.personId2))
-        .forEach(r => {
-          const uncleAunt = allPeople.find(p => p.id === r.personId2);
-          if (uncleAunt) {
-            uncleAuntIds.add(uncleAunt.id);
-          }
-        });
-      directRelations.unclesAunts = Array.from(uncleAuntIds).map(id => allPeople.find(p => p.id === id));
-
-      // מציאת בני זוג עם לוגים מפורטים
-      directRelations.spouses = (() => {
-        const spouseIds = new Set(); // Set לשמירת ID של בני זוג שכבר נמצאו
-        return relations
-          .filter(r => {
-            if (r.relationType !== 'spouse') return false;
-            
-            const spouseId = r.personId1 === personId ? r.personId2 : r.personId1;
-            
-            // אם כבר מצאנו את בן/בת הזוג הזה, נדלג
-            if (spouseIds.has(spouseId)) {
-              debugLog('Skipping duplicate spouse:', spouseId);
-              return false;
-            }
-            
-            spouseIds.add(spouseId);
-            return true;
-          })
-          .map(r => {
-            const spouseId = r.personId1 === personId ? r.personId2 : r.personId1;
-            const spouse = allPeople.find(p => p.id === spouseId);
-            
-            // מציאת ילדים משותפים - שיפור הלוגיקה
-            const commonChildren = relations
-              .filter(cr => {
-                // רק יחסי הורה-ילד
-                if (cr.relationType !== 'parent') return false;
-                
-                // מצא את כל הילדים של האדם הנוכחי
-                const isChildOfPerson = cr.personId1 === personId && cr.personId2;
-                if (!isChildOfPerson) return false;
-                
-                // בדוק אם גם בן/בת הזוג הוא הורה של אותו ילד
-                const childId = cr.personId2;
-                const hasSpouseAsParent = relations.some(r2 => 
-                  r2.relationType === 'parent' && 
-                  r2.personId1 === spouseId && 
-                  r2.personId2 === childId
-                );
-                
-                debugLog('Checking child relation:', {
-                  childId,
-                  isChildOfPerson,
-                  hasSpouseAsParent
-                });
-                
-                return hasSpouseAsParent;
-              })
-              .map(cr => allPeople.find(p => p.id === cr.personId2))
-              .filter(child => child !== undefined);
-
-            debugLog('Found common children:', commonChildren);
-
-            return {
-              spouse,
-              marriageDate: r.marriageDate,
-              commonChildren: Array.from(new Set(commonChildren.map(c => c.id)))
-                .map(id => commonChildren.find(c => c.id === id))
-            };
-          });
-      })();
-
-      return directRelations;
-    };
-
-    // הוספת פונקציית לוג לבדיקת נתונים
-    const debugLog = (label, data) => {
-      console.log('DEBUG:', label, data);
-    };
-
-    // עדכון פונקציית חישוב גיל עם לוג
-    const calculateAge = (birthDate) => {
-      debugLog('Calculating age for birthDate:', birthDate);
-      if (!birthDate) {
-        debugLog('No birthDate provided', null);
-        return null;
+      .button-locked {
+        opacity: 0.7;
+        cursor: not-allowed;
       }
-
-      let birthDateObj;
-      if (typeof birthDate === 'string') {
-        debugLog('birthDate String:', birthDate);
-        // Split the date string into its components
-        const [year, month, day] = birthDate.split('-').map(Number);
-        birthDateObj = new Date(Date.UTC(year, month - 1, day));
-      } else {
-        birthDateObj = new Date(birthDate);
+      .success-message {
+        color: #059669;
+        text-align: center;
+        margin-top: 0.5rem;
+        display: none;
       }
-     
-      debugLog('birthDateObj:', birthDateObj);
-      const today = new Date();
-      let age = today.getFullYear() - birthDateObj.getFullYear();
-      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+      .search-container {
+        max-width: 600px;
+        margin: 0 auto 2rem;
+        position: relative;
+      }
       
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
-        age--;
+      .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: all 0.2s;
       }
-      debugLog('Calculated age:', age);
-      return age;
-    };
-
-    // עדכון פונקציית פורמוט תאריכים עם טיפול מפורט יותר באזורי זמן ולוגים
-    const formatDate = (date) => {
-      debugLog('Raw input date:', date);
-      if (!date) {
-        debugLog('No date provided');
-        return null;
-      }
-    
-      try {
-        // Parse the date parts
-        const [year, month, day] = date.split('-').map(Number);
-        debugLog('Split date parts:', { year, month, day });
-
-        // Validate the parts
-        if (!year || !month || !day) {
-          debugLog('Invalid date parts');
-          return null;
-        }
-
-        // Format as dd.mm.yyyy
-        const formattedDay = day.toString().padStart(2, '0');
-        const formattedMonth = month.toString().padStart(2, '0');
-        
-        const result = `${formattedDay}.${formattedMonth}.${year}`;
-        debugLog('Final formatted result:', result);
-        return result;
-
-      } catch (error) {
-        debugLog('Error in formatDate:', error);
-        return null;
-      }
-    };
-
-    const SpouseSection = ({ spouses }) => {
-      if (!spouses.length) return null;
       
-      return (
-        <div className="mt-3 space-y-2">
-          <div className="text-lg font-medium text-gray-600">
-            {spouses.length > 1 ? 'בני/בנות זוג:' : 'בן/בת זוג:'}
-          </div>
-          {spouses.map(({ spouse, marriageDate, commonChildren }) => {
-            debugLog('Rendering spouse section:', { spouse, commonChildren });
-            
-            // שימוש ב-Set לסינון כפילויות
-            const uniqueChildrenIds = new Set();
-            const uniqueChildren = commonChildren?.filter(child => {
-              if (uniqueChildrenIds.has(child.id)) {
-                debugLog('Duplicate child found:', child);
-                return false;
-              }
-              uniqueChildrenIds.add(child.id);
-              return true;
-            });
-            
-            debugLog('Unique children:', uniqueChildren);
-            
-            return (
-              <div key={spouse.id} className="bg-white rounded-lg shadow-sm p-3">
-                <div className="font-medium d-flex align-items-center">
-                  {spouse.firstName} {spouse.lastName}
-                  {calculateAge(spouse.birthDate) && 
-                    <span className="age-display">
-                      (גיל: {calculateAge(spouse.birthDate)})
-                    </span>
-                  }
-                </div>
-                {marriageDate && (
-                  <div className="date-display mt-1">
-                    נישואין: {formatDate(marriageDate)}
-                  </div>
-                )}
-                {uniqueChildren?.length > 0 && (
-                  <div className="text-sm text-gray-500 mt-2">
-                    ילדים משותפים: 
-                    {uniqueChildren.map(child => (
-                      <span key={child.id} className="d-block mr-2">
-                        {child.firstName} {child.lastName}
-                        {calculateAge(child.birthDate) && 
-                          <span className="age-display">
-                            (גיל: {calculateAge(child.birthDate)})
-                          </span>
-                        }
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      .search-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      
+      .autocomplete-items {
+        position: absolute;
+        border: 1px solid #d1d5db;
+        border-top: none;
+        z-index: 99;
+        top: 100%;
+        left: 0;
+        right: 0;
+        border-radius: 0 0 0.5rem 0.5rem;
+        background: white;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      
+      .autocomplete-item {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      
+      .autocomplete-item:hover {
+        background-color: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100">
+    <div id="app" class="p-4 min-h-screen">
+      <header class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">עץ משפחה</h1>
+        <div class="search-container">
+          <input type="text" 
+                 id="searchInput" 
+                 class="search-input" 
+                 placeholder="חיפוש לפי שם..."
+                 autocomplete="off">
+          <div id="autocompleteList" class="autocomplete-items" style="display: none;"></div>
         </div>
-      );
-    };
-
-const NameButton = ({ person, onClick }) => (
-  <button 
-    onClick={() => onClick(person)}
-    className="text-blue-600 hover:text-blue-800 hover:underline font-normal px-1 py-0 mx-0"
-  >
-    {person.firstName} {person.lastName}
-  </button>
-);
-
-const FamilyCard = ({ person, allPeople, relations, onSelectPerson }) => {
-  const familyRelations = calculateFamilyRelations(person.id, relations, allPeople);
-
-  const getHebrewDate = (date) => {
-    if (!date) return null;
-    const options = { year: 'numeric', month: 'long', day: 'numeric', calendar: 'hebrew' };
-    return new Date(date).toLocaleDateString('he-IL', options);
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-lg p-4 mb-4 w-full">
-      {/* הורים */}
-      {familyRelations.parents.length > 0 && (
-        <div className="text-sm text-gray-500 mb-2">
-          הורים: {familyRelations.parents.map((p, i) => (
-            <React.Fragment key={p.id}>
-              {i > 0 && " | "}
-              <NameButton person={p} onClick={onSelectPerson} />
-            </React.Fragment>
-          ))}
+      </header>
+      
+      <main>
+        <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+          <!-- Cards will be inserted here -->
         </div>
-      )}
-
-      {/* שם האדם */}
-      <div className="text-xl font-medium mb-2">
-        {person.firstName} {person.lastName}
-        {person.deathDate ? (
-          <span className="date-display">
-            (נפטר: {formatDate(person.deathDate)})
-          </span>
-        ) : (
-          <span className="date-display">
-            {person.birthDate && `(נולד: ${formatDate(person.birthDate)}`}
-            {person.birthDate && person.hebrewBirthDate && " / "}
-            {person.hebrewBirthDate && <span className="hebrew-date">{person.hebrewBirthDate}</span>}
-            {(person.birthDate || person.hebrewBirthDate) && ")"}
-          </span>
-        )}
+      </main>
+      
+       <div id="loading" class="text-center py-8">
+        <p class="text-gray-600">טוען נתונים...</p>
       </div>
-
-      {/* ילדים */}
-      {familyRelations.children.length > 0 && (
-        <div className="text-sm text-gray-500">
-          ילדים: {familyRelations.children.map((c, i) => (
-            <React.Fragment key={c.id}>
-              {i > 0 && " | "}
-              <NameButton person={c} onClick={onSelectPerson} />
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-
-      {/* אחים */}
-      {familyRelations.siblings.length > 0 && (
-        <div className="text-sm text-gray-500">
-          אחים: {familyRelations.siblings.map((s, i) => (
-            <React.Fragment key={s.id}>
-              {i > 0 && " | "}
-              <NameButton person={s} onClick={onSelectPerson} />
-            </React.Fragment>
-          ))}
-        </div>
-      )}
     </div>
-  );
-};
-
-    // פונקציית עזר להמרת שמות היחסים לעברית
-    const getRelationTitle = (relation) => {
-      const titles = {
-        parents: 'הורים',
-        children: 'ילדים',
-        siblings: 'אחים',
-        spouses: 'בני/בנות זוג',
-        grandparents: 'סבים',
-        grandchildren: 'נכדים',
-        cousins: 'בני דודים',
-        unclesAunts: 'דודים',
-        nephewsNieces: 'אחיינים'
-      };
-      return titles[relation] || relation;
-    };
-
-    function App() {
-      const [data] = React.useState(window.serverData);
-
-      const handlePersonSelect = (selectedPerson) => {
-        // מצא את המיקום של הכרטיס של האדם שנבחר
-        const cardElement = document.getElementById(`person-${selectedPerson.id}`);
-        if (cardElement) {
-          cardElement.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          // אם הכרטיס לא מוצג, הצג אותו
-          setFilteredPeople(prev => {
-            // בדוק אם האדם כבר מוצג
-            if (!prev.find(p => p.id === selectedPerson.id)) {
-              return [...prev, selectedPerson];
-            }
-            return prev;
-          });
-          // המתן מעט כדי שהכרטיס יתווסף ואז גלול אליו
-          setTimeout(() => {
-            const newCard = document.getElementById(`person-${selectedPerson.id}`);
-            if (newCard) {
-              newCard.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 100);
-        }
-      };
-
-      debugLog('Server data:', data);
-      const [filteredPeople, setFilteredPeople] = React.useState(data?.people || []);
-      const [expandedCards, setExpandedCards] = React.useState(new Set());
-
-      const handleSearch = (term) => {
-        if (!term) {
-          setFilteredPeople(data?.people || []);
-          return;
-        }
-
-        const filtered = data?.people.filter(person => 
-          person.firstName.includes(term) ||
-          person.lastName.includes(term)
-        );
-        setFilteredPeople(filtered);
-      };
-
-      const handleSelect = (person) => {
-        setFilteredPeople([person]);
-        setExpandedCards(new Set([person.id]));
-      };
-
-      const toggleCard = (personId) => {
-        setExpandedCards(prev => {
-          const next = new Set(prev);
-          if (next.has(personId)) {
-            next.delete(personId);
-          } else {
-            next.add(personId);
-          }
-          return next;
-        });
-      };
-
-      if (!data || !data.people) {
-        return (
-          <div className="d-flex justify-content-center align-items-center min-vh-100">
-            <div className="text-center">לא נמצאו נתונים</div>
-          </div>
-        );
-      }
-
-      return (
-        <div 
-          className="container px-2 py-4"
-          style={{ fontSize: '1.25rem' }}
-        >
-          <h1 className="display-4 text-center mb-4">המשפחה שלי</h1>
-          
-          <div className="mb-6">
-            <SearchBox 
-              onSearch={handleSearch}
-              onSelect={handleSelect}
-            />
-          </div>
-
-          <div>
-            {filteredPeople.map((person) => (
-              <div key={person.id} id={`person-${person.id}`}>
-                <FamilyCard 
-                  person={person}
-                  allPeople={data.people}
-                  relations={data.relations}
-                  onSelectPerson={handlePersonSelect}
-                />
+    
+    <div id="addModal" class="modal">
+       <div class="modal-content">
+            <span class="close-button">×</span>
+             <h2 class="text-xl font-bold mb-4 text-center">הוספת קרוב משפחה</h2>
+              
+            <form id="addPersonForm" class="space-y-4">
+                <div class="flex flex-col">
+                    <label for="relationshipType" class="text-gray-700">סוג קשר:</label>
+                    <select id="relationshipType" name="relationshipType" class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500" required>
+                      <option value="child">בן/בת</option>
+                      <option value="sibling">אח/אחות</option>
+                      <option value="spouse">בן/בת זוג</option>
+                    </select>
+                  </div>
+                
+                <div class="flex flex-col">
+                  <label for="firstName" class="text-gray-700">שם פרטי:</label>
+                  <input type="text" id="firstName" name="firstName" class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500" required>
+                </div>
+                
+                <div class="flex flex-col">
+                  <label for="lastName" class="text-gray-700">שם משפחה:</label>
+                  <input type="text" id="lastName" name="lastName" class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500" required>
+                </div>
+                
+                <div class="text-gray-500 text-sm mb-2">
+                  נא למלא תאריך לועזי או תאריך עברי. יש לרשום רק אחד מהשניים.
+                </div>
+                
+                <div class="flex flex-col">
+                  <label for="gregDate" class="text-gray-700">תאריך לידה (לדוגמא 18.06.1997):</label>
+                  <input type="text" id="gregDate" name="gregDate" class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500" placeholder="dd.mm.yyyy">
+                </div>
+                
+                <div class="flex flex-col">
+                  <label for="hebrewDate" class="text-gray-700">תאריך לידה עברי (לדוגמא ג' באייר תשל"ד):</label>
+                  <input type="text" id="hebrewDate" name="hebrewDate" class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500">
+                </div>
+                
+               <div id="marriageDateField" class="hidden flex flex-col">
+                  <label for="marriageDate" class="text-gray-700">תאריך נישואין (לדוגמא 18.06.1997):</label>
+                    <input type="text" id="marriageDate" name="marriageDate" class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500" placeholder="dd.mm.yyyy">
               </div>
-            ))}
-          </div>
+              <div id="parentDetails" class="hidden space-y-4">
+              </div>
+              
+              <div class="flex flex-col">
+                <label for="email" class="text-gray-700">אימייל:</label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500">
+              </div>
+              
+              <div class="flex flex-col">
+                <label for="phone" class="text-gray-700">טלפון:</label>
+                <input type="tel" 
+                       id="phone" 
+                       name="phone" 
+                       class="border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-500"
+                       placeholder="050-0000000">
+              </div>
+            
+                <button type="submit" id="submitButton" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">הוסף</button>
+                <p id="successMessage" class="success-message">ההרשמה הצליחה!</p>
+              </form>
         </div>
-      );
-    }
+      </div>
+    <script>
+      // Make scrollToCard function global
+      window.scrollToCard = function(id) {
+        const card = document.getElementById(`card-${id}`);
+        if (card) {
+          document.querySelectorAll('.card').forEach(c => {
+            c.classList.remove('highlighted');
+          });
+          card.classList.add('highlighted');
+          card.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-
-  <script type="text/babel">
-    // עדכון פונקציית חישוב גיל עם בדיקות נוספות
-    const calculateAge = (birthDate) => {
-      debugLog('Raw birthDate:', birthDate);
-      if (!birthDate) {
-        debugLog('No birthDate provided', null);
-        return null;
+      function formatDate(person, type = 'birth') {
+        let dateStr = '';
+        if (type === 'birth') {
+          if (person.hebrewDate) {
+            dateStr += person.hebrewDate;
+          }
+          if (person.hebrewDate && person.gregorianDate) {
+            dateStr += ' | ';
+          }
+          if (person.gregorianDate) {
+            dateStr += person.gregorianDate;
+          }
+        } else if (type === 'death') {
+          if (person.hebrewDeathDate) {
+            dateStr += person.hebrewDeathDate;
+          }
+          if (person.hebrewDeathDate && person.gregorianDeathDate) {
+            dateStr += ' | ';
+          }
+          if (person.gregorianDeathDate) {
+            dateStr += person.gregorianDeathDate;
+          }
+        }
+        return dateStr;
       }
-
-      let birthDateObj;
-      if (typeof birthDate === 'string') {
-          debugLog('birthDate String:', birthDate);
-        // Split the date string into its components
-        const [year, month, day] = birthDate.split('-').map(Number);
+      
+      function createNameLink(name, id) {
+        // Always show the name, but only make it clickable if the person exists and isn't hidden
+        if (!window.allPeople) return name;
+        const person = window.allPeople.find(p => p.id === id);
+        if (person && !person.isHidden) {
+          return `<span class="name-link" onclick="window.scrollToCard('${id}')">${name}</span>`;
+        }
+        return name;
+      }
+      
+      function formatParents(parents, parentIds) {
+        const parts = [];
+        if (parents.father && parentIds.fatherId) {
+          parts.push(`אבא: ${createNameLink(parents.father, parentIds.fatherId)}`);
+        }
+        if (parents.mother && parentIds.motherId) {
+          parts.push(`אמא: ${createNameLink(parents.mother, parentIds.motherId)}`);
+        }
+        return parts.length > 0 ? parts.join(', ') : '';
+      }
+      
+      function formatChildren(children) {
+        if (!children || children.length === 0) return [];
+        const childrenLinks = children
+          .filter(child => child && child.name)
+          .map(child => createNameLink(child.name, child.id))
+          .join(', ');
+        return [`ילדים: ${childrenLinks}`];
+      }
+      
+      function formatSiblings(siblings) {
+        const parts = [];
+        
+        if (siblings.fullSiblings && siblings.fullSiblings.length > 0) {
+          const names = siblings.fullSiblings
+            .filter(s => s && s.name)
+            .map(s => createNameLink(s.name, s.id))
+            .join(', ');
+          parts.push(`אחים/אחיות: ${names}`);
+        }
+        
+        if (siblings.halfSiblings && siblings.halfSiblings.length > 0) {
+          const halfSiblingsByType = siblings.halfSiblings.reduce((acc, sibling) => {
+            if (!acc[sibling.relationship]) {
+              acc[sibling.relationship] = [];
+            }
+            acc[sibling.relationship].push(createNameLink(sibling.name, sibling.id));
+            return acc;
+          }, {});
           
-          birthDateObj = new Date(Date.UTC(year, month - 1, day));
+          Object.entries(halfSiblingsByType).forEach(([type, names]) => {
+            parts.push(`אחים/אחיות ${type}: ${names.join(', ')}`);
+          });
+        }
+        
+        return parts;
+      }
+      
+      function createCard(person) {
+         const dateDisplay = formatDate(person, 'birth');
+         const deathDisplay = formatDate(person, 'death');
+         const parentsDisplay = formatParents(person.parents, {
+           fatherId: person.fatherId,
+           motherId: person.motherId
+         });
+         const childrenLines = formatChildren(person.children);
+         const siblingsLines = formatSiblings(person.siblings);
+         
+         return `
+           <div id="card-${person.id}" class="card bg-white rounded-lg shadow-lg p-6 hover:shadow-xl">
+               <div class="add-button" data-person-id="${person.id}">
+                   <i class="fas fa-plus"></i>
+               </div>
+               <div class="text-right">
+                   ${parentsDisplay ? `
+                   <div class="text-sm text-gray-500 mb-2">
+                       ${parentsDisplay}
+                   </div>
+                   ` : ''}
+               
+                   <h2 class="text-xl font-bold mb-2">${person.firstName} ${person.lastName}</h2>
+               
+                   <div class="text-gray-600 mb-2">
+                   ${dateDisplay ? `<p>תאריך לידה: <strong>${dateDisplay}</strong></p>` : ''}
+                   ${deathDisplay ? `<p class="mt-1">תאריך פטירה: <strong>${deathDisplay}</strong></p>` : ''}
+                   </div>
+                   
+        ${person.spouse ? `
+            <div class="text-sm text-gray-500 mb-2 border-t pt-2">
+            <p>בן/בת זוג: ${createNameLink(person.spouse, person.spouseId)}${person.marriageDate ? ` (${person.marriageDate})` : ''}</p>
+            </div>
+        ` : ''}
+                
+                 ${childrenLines.length > 0 ? `
+                <div class="text-sm text-gray-500 mb-2">
+                    ${childrenLines.map(line => `<p>${line}</p>`).join('')}
+                </div>
+              ` : ''}
+                
+                ${siblingsLines.length > 0 ? `
+                <div class="text-sm text-gray-500 border-t pt-2">
+                    ${siblingsLines.map(line => `<p>${line}</p>`).join('')}
+                </div>
+              ` : ''}
+                   </div>
+               </div>
+           `;
+       }
+      
+      function loadData() {
+        const container = document.getElementById('cards-container');
+        const loading = document.getElementById('loading');
+        
+        loading.style.display = 'block';
+        container.innerHTML = '';
+        
+        google.script.run
+          .withSuccessHandler(function(data) {
+            loading.style.display = 'none';
+            // Store all people data globally for reference
+            window.allPeople = data;
+            
+            if (!data || data.length === 0) {
+              container.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                  <p class="text-gray-600">לא נמצאו נתונים</p>
+                </div>
+              `;
+              return;
+            }
+            
+            data.forEach(person => {
+              container.innerHTML += createCard(person);
+            });
+              
+             document.querySelectorAll('.add-button').forEach(button => {
+              button.addEventListener('click', function() {
+                  const personId = this.dataset.personId;
+                  openAddModal(personId);
+                  
+                  // Add event listener for the close button
+                  const closeButton = document.querySelector('.close-button');
+                  closeButton.addEventListener('click', function() {
+                     closeAddModal();
+                  });
+              });
+            });
+          })
+          .withFailureHandler(function(error) {
+            loading.style.display = 'none';
+            container.innerHTML = `
+              <div class="col-span-full text-center py-8">
+                <p class="text-red-600">שגיאה בטעינת הנתונים</p>
+              </div>
+            `;
+            console.error('Error:', error);
+          })
+          .getData();
+      }
+      
+        function openAddModal(personId) {
+            const modal = document.getElementById('addModal');
+            modal.style.display = "block";
+             modal.dataset.relatedPersonId = personId;
+            const form = document.getElementById('addPersonForm');
+             form.reset();
+              handleRelationshipTypeChange();
+              
+            // Set focus on the first input
+           document.getElementById('firstName').focus();
+       }
 
-      } else {
-        birthDateObj = new Date(birthDate);
+      function closeAddModal() {
+          const modal = document.getElementById('addModal');
+          modal.style.display = "none";
       }
     
-      debugLog('birthDateObj:', birthDateObj);
       
-      const today = new Date();
-      let age = today.getFullYear() - birthDateObj.getFullYear();
-      const monthDiff = today.getMonth() - birthDateObj.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
-        age--;
+    function handleRelationshipTypeChange() {
+        const relationshipTypeSelect = document.getElementById('relationshipType');
+        const marriageDateField = document.getElementById('marriageDateField');
+        const parentDetailsDiv = document.getElementById('parentDetails');
+        
+         if (relationshipTypeSelect.value === 'spouse') {
+            marriageDateField.classList.remove('hidden');
+             parentDetailsDiv.classList.add('hidden');
+        } else if (relationshipTypeSelect.value === 'child') {
+             marriageDateField.classList.add('hidden');
+             parentDetailsDiv.classList.remove('hidden');
+        } else {
+           marriageDateField.classList.add('hidden');
+            parentDetailsDiv.classList.add('hidden');
+        }
+    }
+  
+       function handleParentTypeChange(){
+           const parentTypeSelect = document.getElementById('parentType');
+           // Remove references to parentSpouseDetails
+       }
+    
+     document.getElementById('relationshipType').addEventListener('change', handleRelationshipTypeChange);
+     document.getElementById('addPersonForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+           const modal = document.getElementById('addModal');
+           const relatedPersonId = modal.dataset.relatedPersonId;
+           const firstName = document.getElementById('firstName').value;
+           const lastName = document.getElementById('lastName').value;
+           const gregDate = document.getElementById('gregDate').value;
+           const hebrewDate = document.getElementById('hebrewDate').value;
+          const relationshipType = document.getElementById('relationshipType').value;
+          const marriageDate = document.getElementById('marriageDate').value;
+          const email = document.getElementById('email').value;
+          const phone = document.getElementById('phone').value;
+            
+         const formData = {
+              relatedPersonId: relatedPersonId,
+              firstName: firstName,
+              lastName: lastName,
+              gregDate: gregDate,
+              hebrewDate: hebrewDate,
+             relationshipType: relationshipType,
+             marriageDate: marriageDate,
+             email: email,
+             phone: phone
+            };
+
+            const submitButton = document.getElementById('submitButton');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Lock button
+            submitButton.disabled = true;
+            submitButton.classList.add('button-locked');
+            submitButton.textContent = '...מוסיף';
+
+            google.script.run
+                .withSuccessHandler(function(newPersonId) {
+                    // Show success message
+                    successMessage.style.display = 'block';
+                    
+                    // Reset after 5 seconds
+                    setTimeout(() => {
+                        submitButton.disabled = false;
+                        submitButton.classList.remove('button-locked');
+                        submitButton.textContent = 'הוסף';
+                        successMessage.style.display = 'none';
+                        closeAddModal();  // Just close the modal without reloading
+                    }, 2500);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error adding new person:', error);
+                    alert('Failed to add new person. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.classList.remove('button-locked');
+                    submitButton.textContent = 'הוסף';
+                })
+                 .addPerson(formData);
+        });
+
+      function setupSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const autocompleteList = document.getElementById('autocompleteList');
+        
+        searchInput.addEventListener('input', function() {
+          const query = this.value.trim().toLowerCase();
+          if (!query) {
+            autocompleteList.style.display = 'none';
+            return;
+          }
+          
+          // Filter people by first name or last name
+          const matches = window.allPeople.filter(person => 
+            person.firstName.toLowerCase().startsWith(query) ||
+            person.lastName.toLowerCase().startsWith(query)
+          );
+          
+          if (matches.length > 0) {
+            autocompleteList.innerHTML = matches
+              .map(person => `
+                <div class="autocomplete-item" onclick="selectPerson('${person.id}')">
+                  ${person.firstName} ${person.lastName}
+                </div>
+              `).join('');
+            autocompleteList.style.display = 'block';
+          } else {
+            autocompleteList.style.display = 'none';
+          }
+        });
+        
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+            autocompleteList.style.display = 'none';
+          }
+        });
       }
-      debugLog('Calculated age:', age);
-      return age;
-    };
-  </script>
-</body>
+      
+      function selectPerson(id) {
+        document.getElementById('autocompleteList').style.display = 'none';
+        document.getElementById('searchInput').value = '';
+        window.scrollToCard(id);
+      }
+      
+      window.onload = function() {
+        loadData();
+        setupSearch();
+      };
+    </script>
+  </body>
 </html>
